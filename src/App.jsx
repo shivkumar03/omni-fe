@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+
+const API_URL = import.meta.env.PROD
+  ? "https://omni-be-vsqx.onrender.com"
+  : "http://127.0.0.1:5000";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -106,7 +110,7 @@ function App() {
 
   // Load persistent history from backend on mount (calendar only)
   useEffect(() => {
-    axios.get("http://127.0.0.1:5000/get_history")
+    axios.get(`${API_URL}/get_history`)
       .then(res => setLocalHistory(res.data))
       .catch(() => {});
   }, []);
@@ -275,8 +279,8 @@ const [pulse, setPulse] = useState(false);
   const saveToLocalHistory = (cmd) => {
     const key = getHistoryDate();
     // Save to backend (persistent, for calendar)
-    axios.post("http://127.0.0.1:5000/save_history", { date: key, command: cmd })
-      .then(() => axios.get("http://127.0.0.1:5000/get_history"))
+    axios.post(`${API_URL}/save_history`, { date: key, command: cmd })
+      .then(() => axios.get(`${API_URL}/get_history`))
       .then(res => setLocalHistory(res.data))
       .catch(() => {});
     // Session history: only lives until page refresh
@@ -287,7 +291,7 @@ const [pulse, setPulse] = useState(false);
   const handleVoiceCommand = async (voiceText) => {
     setStatus("⚡ Processing...");
     try {
-      const res = await axios.post("http://127.0.0.1:5000/command", {
+      const res = await axios.post(`${API_URL}/command`, {
         command: voiceText,
       });
       const msg = res.data.status;
@@ -308,7 +312,7 @@ const [pulse, setPulse] = useState(false);
     setPulse(true);
 
     try {
-      const res = await axios.post("http://127.0.0.1:5000/command", {
+      const res = await axios.post(`${API_URL}/command`, {
         command: cmdToSend,
       });
       const msg = res.data.status;
@@ -326,7 +330,7 @@ const [pulse, setPulse] = useState(false);
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:5000/system_stats");
+        const res = await axios.get(`${API_URL}/system_stats`);
         setCpuLoad(res.data.cpu);
         setMemoryUsage(res.data.memory);
         setActiveProcesses(res.data.processes.slice(0, 5));
@@ -343,8 +347,8 @@ const [pulse, setPulse] = useState(false);
   const deleteLocalHistoryItem = (dateKey, index) => {
     const cmd = localHistory[dateKey]?.[index];
     if (!cmd) return;
-    axios.post("http://127.0.0.1:5000/delete_history_item", { date: dateKey, command: cmd })
-      .then(() => axios.get("http://127.0.0.1:5000/get_history"))
+    axios.post(`${API_URL}/delete_history_item`, { date: dateKey, command: cmd })
+      .then(() => axios.get(`${API_URL}/get_history`))
       .then(res => setLocalHistory(res.data))
       .catch(() => {});
   };
@@ -353,8 +357,8 @@ const [pulse, setPulse] = useState(false);
   const clearDateHistory = (dateKey) => {
     const items = localHistory[dateKey] || [];
     Promise.all(items.map(cmd =>
-      axios.post("http://127.0.0.1:5000/delete_history_item", { date: dateKey, command: cmd })
-    )).then(() => axios.get("http://127.0.0.1:5000/get_history"))
+      axios.post(`${API_URL}/delete_history_item`, { date: dateKey, command: cmd })
+    )).then(() => axios.get(`${API_URL}/get_history`))
       .then(res => setLocalHistory(res.data))
       .catch(() => {});
     speak("History cleared");
@@ -369,7 +373,7 @@ const [pulse, setPulse] = useState(false);
       const formData = new FormData();
       formData.append("file", uploadFile);
       formData.append("question", uploadQuestion || "Analyze this file and give a detailed summary.");
-      const res = await axios.post("http://127.0.0.1:5000/upload_analyze", formData);
+      const res = await axios.post(`${API_URL}/upload_analyze`, formData);
       if (res.data.error) {
         setUploadAnswer("❌ " + res.data.error);
       } else {
