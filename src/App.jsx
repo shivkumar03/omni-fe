@@ -27,13 +27,16 @@ const sendToAgent = async (text) => {
   if (localAgentAvailable && isSystemCommand(text)) {
     try {
       const res = await axios.post(`${LOCAL_AGENT}/system_command`, { command: text }, { timeout: 5000 });
-      return res.data.status;
+      const status = res.data.status;
+      if (status === "Command not recognized locally") return null;
+      return status;
     } catch {
       // agent went offline, fall through to cloud
     }
   }
   return null;
 };
+
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
