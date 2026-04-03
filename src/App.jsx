@@ -332,10 +332,9 @@ const [pulse, setPulse] = useState(false);
         saveToLocalHistory(voiceText);
         return;
       }
-      const res = await axios.post(`${API_URL}/command`, {
-        command: voiceText,
-      });
-      const msg = res.data.status;
+      const res = await axios.post(`${API_URL}/command`, { command: voiceText });
+      const { status: msg, url } = res.data;
+      if (url) window.open(url, "_blank");
       setStatus("🗣️ " + msg);
       speak(msg);
       saveToLocalHistory(voiceText);
@@ -348,10 +347,8 @@ const [pulse, setPulse] = useState(false);
   const sendCommand = async (cmd = null) => {
     const cmdToSend = cmd || command;
     if (!cmdToSend.trim()) return;
-
     setStatus("⚡ Processing...");
     setPulse(true);
-
     try {
       const local = await sendToAgent(cmdToSend);
       if (local) {
@@ -361,17 +358,15 @@ const [pulse, setPulse] = useState(false);
         if (!cmd) setCommand("");
         return;
       }
-      const res = await axios.post(`${API_URL}/command`, {
-        command: cmdToSend,
-      });
-      const msg = res.data.status;
+      const res = await axios.post(`${API_URL}/command`, { command: cmdToSend });
+      const { status: msg, url } = res.data;
+      if (url) window.open(url, "_blank");
       setStatus("✅ " + msg);
       speak(msg);
       saveToLocalHistory(cmdToSend);
     } catch {
       setStatus("❌ Backend not connected");
     }
-
     if (!cmd) setCommand("");
   };
 
