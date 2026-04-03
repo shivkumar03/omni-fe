@@ -4,6 +4,36 @@ import axios from "axios";
 const API_URL = import.meta.env.PROD
   ? "https://omni-be-vsqx.onrender.com"
   : "http://127.0.0.1:5000";
+
+const LOCAL_AGENT = "http://127.0.0.1:5001";
+
+const SYSTEM_KEYWORDS = [
+  "shutdown", "restart", "lock", "volume up", "volume down", "mute",
+  "brightness", "minimize", "maximize", "wifi on", "wifi off",
+  "open ", "close ", "play ", "settings"
+];
+
+let localAgentAvailable = false;
+
+// Check if local agent is running
+axios.get(`${LOCAL_AGENT}/ping`, { timeout: 1500 })
+  .then(() => { localAgentAvailable = true; })
+  .catch(() => { localAgentAvailable = false; });
+
+const isSystemCommand = (text) =>
+  SYSTEM_KEYWORDS.some(k => text.toLowerCase().includes(k));
+
+const sendToAgent = async (text) => {
+  if (localAgentAvailable && isSystemCommand(text)) {
+    try {
+      const res = await axios.post(`${LOCAL_AGENT}/system_command`, { command: text }, { timeout: 5000 });
+      return res.data.status;
+    } catch {
+      // agent went offline, fall through to cloud
+    }
+  }
+  return null;
+};
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -291,6 +321,13 @@ const [pulse, setPulse] = useState(false);
   const handleVoiceCommand = async (voiceText) => {
     setStatus("⚡ Processing...");
     try {
+      const local = await sendToAgent(voiceText);
+      if (local) {
+        setStatus("🗣️ " + local);
+        speak(local);
+        saveToLocalHistory(voiceText);
+        return;
+      }
       const res = await axios.post(`${API_URL}/command`, {
         command: voiceText,
       });
@@ -312,6 +349,14 @@ const [pulse, setPulse] = useState(false);
     setPulse(true);
 
     try {
+      const local = await sendToAgent(cmdToSend);
+      if (local) {
+        setStatus("✅ " + local);
+        speak(local);
+        saveToLocalHistory(cmdToSend);
+        if (!cmd) setCommand("");
+        return;
+      }
       const res = await axios.post(`${API_URL}/command`, {
         command: cmdToSend,
       });
@@ -396,7 +441,7 @@ const [pulse, setPulse] = useState(false);
   // WELCOME ON FIRST CLICK
   useEffect(() => {
     const handleFirstClick = () => {
-      const welcome = "Hello , welcome. What can I help you with today?";
+      const welcome = "Hello  omni, welcome. What can I help you with today?";
       setStatus("🟢 " + welcome);
       speak(welcome);
       document.removeEventListener("click", handleFirstClick);
