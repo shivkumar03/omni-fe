@@ -1,0 +1,473 @@
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+
+function App() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+  
+  // Existing states
+  const [command, setCommand] = useState("");
+  const [status, setStatus] = useState("⚡ System Ready");
+  const [history, setHistory] = useState([]);
+  const [pulse, setPulse] = useState(false);
+
+  // SYSTEM STATS
+  const [cpuLoad, setCpuLoad] = useState(0);
+  const [memoryUsage, setMemoryUsage] = useState({ used: 0, total: 0 });
+  const [activeProcesses, setActiveProcesses] = useState([]);
+
+  // Voice states
+  const [voices, setVoices] = useState([]);
+  const [currentVoiceId, setCurrentVoiceId] = useState(0);
+
+  // MIC
+  const recognitionRef = useRef(null);
+  const isListeningRef = useRef(false);
+
+  // Load voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const allVoices = speechSynthesis.getVoices();
+      if (allVoices.length > 0) {
+        // Filter and categorize 5-6 voices
+        const filteredVoices = allVoices
+          .filter(voice => voice.lang.startsWith('en-') || voice.lang === 'en-IN')
+          .filter(voice => {
+            const name = voice.name.toLowerCase();
+            return name.includes('female') || name.includes('girl') || name.includes('boy') || 
+                   name.includes('male') || name.includes('man') || name.includes('child') ||
+                   name.includes('zira') || name.includes('samantha') || name.includes('hazel') ||
+                   name.includes('susan') || name.includes('david') || name.includes('mark');
+          })
+          .slice(0, 6); // Top 6 matching voices
+        
+        setVoices(filteredVoices);
+        
+        // Load saved voice
+        const savedId = localStorage.getItem('selectedVoiceId');
+        if (savedId && parseInt(savedId) < filteredVoices.length) {
+          setCurrentVoiceId(parseInt(savedId));
+        }
+      }
+    };
+
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+    
+    return () => {
+      speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
+  // Save voice selection
+  const handleVoiceChange = (e) => {
+    const id = parseInt(e.target.value);
+    setCurrentVoiceId(id);
+    localStorage.setItem('selectedVoiceId', id);
+  };
+
+  // SPEAK FUNCTION - Updated with voice selection
+  const speak = (text) => {
+    window.speechSynthesis.cancel();
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-IN";
+    
+    // Apply selected voice if available
+    if (voices.length > 0 && currentVoiceId < voices.length) {
+      speech.voice = voices[currentVoiceId];
+    }
+    
+    speech.onstart = () => setPulse(true);
+    speech.onend = () => setPulse(false);
+    window.speechSynthesis.speak(speech);
+  };
+
+  // Rest of existing code unchanged...
+  // INIT MIC
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setStatus("❌ Use Google Chrome");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const voiceText = event.results[0][0].transcript;
+      setCommand(voiceText);
+      handleVoiceCommand(voiceText);
+    };
+
+    recognition.onerror = (event) => {
+      console.log("Mic Error:", event.error);
+
+      if (event.error === "not-allowed") {
+        setStatus("❌ Microphone permission denied");
+      } else if (event.error === "audio-capture") {
+        setStatus("❌ No microphone detected");
+      } else if (event.error === "no-speech") {
+        setStatus("⚠️ No speech detected");
+      } else if (event.error === "network") {
+        setStatus("❌ Network error");
+      } else {
+        setStatus("❌ Mic error: " + event.error);
+      }
+
+      isListeningRef.current = false;
+      setPulse(false);
+    };
+
+    recognition.onend = () => {
+      isListeningRef.current = false;
+      setPulse(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  // START LISTENING
+  const startListening = () => {
+    if (!recognitionRef.current) return;
+    window.speechSynthesis.cancel();
+    if (isListeningRef.current) return;
+
+    try {
+      recognitionRef.current.start();
+      isListeningRef.current = true;
+      setStatus("🎤 Listening...");
+      setPulse(true);
+    } catch (e) {
+      console.log("Start error:", e);
+    }
+  };
+
+  // VOICE COMMAND
+  const handleVoiceCommand = async (voiceText) => {
+    setStatus("⚡ Processing...");
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/command", {
+        command: voiceText,
+      });
+      const msg = res.data.status;
+      setStatus("🗣️ " + msg);
+      speak(msg);
+      setHistory((prev) => [voiceText, ...prev.slice(0, 5)]);
+    } catch {
+      setStatus("❌ Backend error");
+    }
+  };
+
+  // TEXT COMMAND
+  const sendCommand = async (cmd = null) => {
+    const cmdToSend = cmd || command;
+    if (!cmdToSend.trim()) return;
+
+    setStatus("⚡ Processing...");
+    setPulse(true);
+
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/command", {
+        command: cmdToSend,
+      });
+      const msg = res.data.status;
+      setStatus("✅ " + msg);
+      speak(msg);
+      setHistory((prev) => [cmdToSend, ...prev.slice(0, 5)]);
+    } catch {
+      setStatus("❌ Backend not connected");
+    }
+
+    if (!cmd) setCommand("");
+  };
+
+  // FETCH SYSTEM STATS
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get("http://127.0.0.1:5000/system_stats");
+        setCpuLoad(res.data.cpu);
+        setMemoryUsage(res.data.memory);
+        setActiveProcesses(res.data.processes.slice(0, 5));
+      } catch (e) {
+        console.log("Stats fetch error:", e);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // WELCOME ON FIRST CLICK
+  useEffect(() => {
+    const handleFirstClick = () => {
+      const welcome = "Hello Shiv, welcome. What can I help you with today?";
+      setStatus("🟢 " + welcome);
+      speak(welcome);
+      document.removeEventListener("click", handleFirstClick);
+    };
+    document.addEventListener("click", handleFirstClick);
+  }, []);
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.grid}></div>
+      <div style={styles.bgGlow}></div>
+
+      {/* LEFT PANEL: SYSTEM STATS + QUICK MANAGE */}
+      <div style={styles.sidebar}>
+        <h3 style={styles.panelTitle}>🖥️ System Stats</h3>
+        <p>CPU Load: {cpuLoad}%</p>
+        <p>
+          Memory: {memoryUsage.used} / {memoryUsage.total} GB
+        </p>
+        <h4 style={{ marginTop: "10px" }}>Active Processes</h4>
+        {activeProcesses.map((p, i) => (
+          <p key={i} style={styles.historyItem}>
+            • {p}
+          </p>
+        ))}
+        <h4 style={{ marginTop: "10px" }}>Quick Manage</h4>
+        <button style={styles.button} onClick={() => sendCommand("shutdown")}>
+          🔴 Shutdown
+        </button>
+        <button style={styles.button} onClick={() => sendCommand("restart")}>
+          🔄 Restart
+        </button>
+        <button style={styles.button} onClick={() => sendCommand("lock")}>
+          🔒 Lock
+        </button>
+        <button 
+          style={{...styles.button, background: "linear-gradient(135deg, #ef4444, #dc2626)", marginTop: "20px"}} 
+          onClick={handleLogout}
+        >
+          🚪 Logout
+        </button>
+      </div>
+
+      {/* RIGHT PANEL: HISTORY */}
+      <div style={styles.rightPanel}>
+        <h3 style={styles.panelTitle}>🧠 History</h3>
+        {history.map((h, i) => (
+          <p key={i} style={styles.historyItem}>
+            • {h}
+          </p>
+        ))}
+      </div>
+
+      {/* CENTRAL CARD: OMNI CORE */}
+      <motion.div style={styles.card}>
+        <h1 style={styles.title}>OMNI</h1>
+        <div style={styles.coreWrapper}>
+          <motion.div
+            animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            style={styles.pulse}
+          />
+          <motion.div
+            animate={{
+              scale: pulse ? 1.25 : 1,
+              boxShadow: pulse
+                ? "0 0 150px #22d3ee"
+                : "0 0 80px #0ea5e9",
+            }}
+            transition={{ duration: 0.5 }}
+            style={styles.core}
+          />
+        </div>
+
+        <p style={styles.status}>{status}</p>
+
+        <input
+          style={styles.input}
+          placeholder="Type command..."
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" &amp;&amp; sendCommand()}
+        />
+
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <button style={styles.button} onClick={sendCommand}>
+            ⚡ Execute
+          </button>
+
+          {/* Voice Selector - New */}
+          <div style={styles.voiceSelectorWrapper}>
+            <label style={styles.voiceLabel}>Voice:</label>
+            <select 
+              value={currentVoiceId} 
+              onChange={handleVoiceChange}
+              style={styles.voiceSelect}
+              disabled={voices.length === 0}
+            >
+              {voices.length === 0 ? (
+                <option>Loading voices...</option>
+              ) : (
+                voices.map((voice, id) => (
+                  <option key={id} value={id}>
+                    {voice.name} {voice.lang}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <motion.button
+            whileTap={{ scale: 0.8 }}
+            style={styles.mic}
+            onClick={startListening}
+          >
+            🎤
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+export default App;
+
+// Updated styles with voice selector
+const styles = {
+  container: {
+    height: "100vh",
+    background: "#020617",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    color: "white",
+    fontFamily: "Arial",
+    overflow: "hidden",
+  },
+  grid: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    backgroundImage:
+      "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
+    backgroundSize: "40px 40px",
+  },
+  bgGlow: {
+    position: "absolute",
+    width: "600px",
+    height: "600px",
+    background: "radial-gradient(circle, #0ea5e9, transparent)",
+    filter: "blur(120px)",
+    opacity: 0.4,
+  },
+  sidebar: {
+    position: "absolute",
+    left: "20px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "200px",
+    backdropFilter: "blur(10px)",
+    background: "rgba(255,255,255,0.05)",
+    padding: "15px",
+    borderRadius: "15px",
+  },
+  rightPanel: {
+    position: "absolute",
+    right: "20px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "200px",
+    backdropFilter: "blur(10px)",
+    background: "rgba(255,255,255,0.05)",
+    padding: "15px",
+    borderRadius: "15px",
+  },
+  panelTitle: { color: "#22d3ee", marginBottom: "10px" },
+  historyItem: { fontSize: "13px", color: "#cbd5e1" },
+  card: {
+    backdropFilter: "blur(25px)",
+    background: "rgba(255,255,255,0.05)",
+    borderRadius: "25px",
+    padding: "40px",
+    textAlign: "center",
+    border: "1px solid rgba(255,255,255,0.1)",
+  },
+  title: { fontSize: "44px", letterSpacing: "6px", color: "#38bdf8" },
+  coreWrapper: { position: "relative", width: "180px", height: "180px", margin: "30px auto" },
+  core: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle at 30% 30%, #ffffff44, transparent), radial-gradient(circle, #22d3ee, #1e3a8a)",
+  },
+  pulse: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    borderRadius: "50%",
+    border: "2px solid #22d3ee",
+  },
+  status: { marginBottom: "20px", color: "#cbd5e1" },
+  input: {
+    padding: "14px",
+    width: "260px",
+    borderRadius: "10px",
+    border: "none",
+    marginBottom: "15px",
+    background: "rgba(255,255,255,0.1)",
+    color: "white",
+    outline: "none",
+  },
+  button: {
+    padding: "8px 12px",
+    borderRadius: "10px",
+    border: "none",
+    marginTop: "5px",
+    width: "100%",
+    background: "linear-gradient(135deg, #06b6d4, #3b82f6)",
+    color: "white",
+    cursor: "pointer",
+  },
+  mic: {
+    padding: "12px",
+    borderRadius: "50%",
+    border: "none",
+    background: "#0ea5e9",
+    color: "white",
+    cursor: "pointer",
+  },
+  // New voice selector styles
+  voiceSelectorWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "2px",
+    minWidth: "140px",
+  },
+  voiceLabel: {
+    fontSize: "12px",
+    color: "#cbd5e1",
+    fontWeight: "500",
+  },
+  voiceSelect: {
+    padding: "6px 8px",
+    borderRadius: "8px",
+    border: "1px solid rgba(255,255,255,0.2)",
+    background: "rgba(255,255,255,0.1)",
+    color: "white",
+    fontSize: "12px",
+    minWidth: "120px",
+    backdropFilter: "blur(10px)",
+    cursor: "pointer",
+  },
+};
