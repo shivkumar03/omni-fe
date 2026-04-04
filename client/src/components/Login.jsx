@@ -246,6 +246,31 @@ function Login() {
 
   return (
     <div className="auth-container">
+      {/* DOWNLOAD BANNER */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0,
+        display: "flex", justifyContent: "center", alignItems: "center",
+        gap: "12px", padding: "8px 16px",
+        background: "rgba(2,6,23,0.95)",
+        borderBottom: "1px solid rgba(34,211,238,0.2)",
+        backdropFilter: "blur(10px)",
+        zIndex: 999, flexWrap: "wrap",
+      }}>
+        <span style={{ fontSize: "12px", color: "#94a3b8" }}>🖥️ Get full system control on Windows</span>
+        <a
+          href="https://github.com/shivkumar03/omni-fe/releases/latest/download/OMNI-Assistant-Setup.zip"
+          target="_blank" rel="noreferrer"
+          style={{
+            padding: "5px 14px", borderRadius: "20px",
+            background: "linear-gradient(135deg, #06b6d4, #3b82f6)",
+            color: "white", fontSize: "12px", fontWeight: 700,
+            textDecoration: "none", letterSpacing: "0.5px",
+          }}
+        >
+          ⬇️ Download OMNI v3.0 for Windows
+        </a>
+        <span style={{ fontSize: "11px", color: "#475569" }}>Free • No install needed</span>
+      </div>
       <div className="auth-card">
         <h1>AI Voice Assistant</h1>
         <h2>Login</h2>
