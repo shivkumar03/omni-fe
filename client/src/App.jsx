@@ -500,7 +500,7 @@ const [pulse, setPulse] = useState(false);
       }}>
         <span style={{ fontSize: "12px", color: "#94a3b8" }}>🖥️ Want full system control?</span>
         <a
-          href="https://github.com/shivkumar03/AI-LAPTOP-ASSISTANT/releases/latest/download/OMNI-Assistant-Setup.zip"
+          href="https://github.com/shivkumar03/omni-fe/releases/latest/download/OMNI-Assistant-Setup.zip"
           target="_blank"
           rel="noreferrer"
           style={{
