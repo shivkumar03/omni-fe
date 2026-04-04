@@ -488,6 +488,35 @@ const [pulse, setPulse] = useState(false);
       <div style={dynGrid}></div>
       <div style={dynGlow}></div>
 
+      {/* DOWNLOAD BANNER - top center */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0,
+        display: "flex", justifyContent: "center", alignItems: "center",
+        gap: "12px", padding: "8px 16px",
+        background: "rgba(2,6,23,0.92)",
+        borderBottom: `1px solid ${theme.accent}33`,
+        backdropFilter: "blur(10px)",
+        zIndex: 999,
+      }}>
+        <span style={{ fontSize: "12px", color: "#94a3b8" }}>🖥️ Want full system control?</span>
+        <a
+          href="https://github.com/shivkumar03/AI-LAPTOP-ASSISTANT/releases/latest/download/OMNI-Assistant-Setup.zip"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            padding: "5px 14px", borderRadius: "20px",
+            background: theme.btnBg,
+            color: "white", fontSize: "12px", fontWeight: 700,
+            textDecoration: "none",
+            boxShadow: `0 0 12px ${theme.glow}60`,
+            letterSpacing: "0.5px",
+          }}
+        >
+          ⬇️ Download Windows App
+        </a>
+        <span style={{ fontSize: "11px", color: "#475569" }}>Free • No install needed</span>
+      </div>
+
       {/* LEFT PANEL: SYSTEM STATS + QUICK MANAGE */}
       <div style={styles.sidebar}>
         {/* Header */}

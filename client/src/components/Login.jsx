@@ -4,6 +4,10 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/Auth.css";
 import axios from "axios";
 
+const API_URL = import.meta.env.PROD
+  ? "https://omni-be-vsqx.onrender.com"
+  : "http://127.0.0.1:5000";
+
 const FACEAPI_CDN = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js";
 const MODEL_URL  = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
 
@@ -218,7 +222,7 @@ function Login() {
   const sendLoginNotification = async () => {
     const location = await getLocation();
     try {
-      await axios.post("http://127.0.0.1:5000/login_notify", { location });
+      await axios.post(`${API_URL}/login_notify`, { location });
     } catch (err) {
       console.error("Login notify failed:", err?.response?.data || err.message);
     }
