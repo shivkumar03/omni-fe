@@ -52,6 +52,24 @@ const sendToAgent = async (text) => {
   return status;
 };
 
+// Windows-only commands that CANNOT work without local agent
+const WINDOWS_ONLY = [
+  "shutdown", "restart", "lock", "volume up", "volume down", "mute",
+  "brightness", "minimize", "maximize", "wifi on", "wifi off",
+  "open notepad", "open calculator", "open camera", "open settings",
+  "open word", "open excel", "open powerpoint", "open paint",
+  "open task manager", "open file explorer", "open explorer",
+  "open vscode", "open vs code", "open chrome", "open edge",
+  "open spotify", "open whatsapp", "open telegram", "open zoom",
+  "open vlc", "open notepad", "open cmd", "open powershell",
+  "close ", "increase brightness", "decrease brightness",
+];
+
+const isWindowsOnlyCommand = (text) => {
+  const t = text.toLowerCase();
+  return WINDOWS_ONLY.some(k => t.includes(k));
+};
+
 // ── Device detection ──────────────────────────────────────────────────────
 const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
@@ -455,6 +473,13 @@ const [pulse, setPulse] = useState(false);
         saveToLocalHistory(voiceText);
         return;
       }
+      // If Windows-only command but no extension → tell user to download app
+      if (!isMobile && isWindowsOnlyCommand(voiceText) && !extensionAvailable) {
+        const msg = "⚠️ Windows app needed. Download OMNI v3.0 from the top banner to run this command.";
+        setStatus(msg);
+        speak("Please download the OMNI Windows app to use system commands.");
+        return;
+      }
       // Fallback: cloud AI
       const res = await axios.post(`${API_URL}/command`, { command: voiceText });
       const { status: msg, url } = res.data;
@@ -491,6 +516,14 @@ const [pulse, setPulse] = useState(false);
         setStatus("✅ " + local);
         speak(local);
         saveToLocalHistory(cmdToSend);
+        if (!cmd) setCommand("");
+        return;
+      }
+      // If Windows-only command but no extension → tell user to download app
+      if (!isMobile && isWindowsOnlyCommand(cmdToSend) && !extensionAvailable) {
+        const msg = "⚠️ Download OMNI Windows App (top banner) + run START_LOCAL_AGENT.bat to use system commands.";
+        setStatus(msg);
+        speak("Please download the OMNI Windows app to use system commands.");
         if (!cmd) setCommand("");
         return;
       }
