@@ -440,7 +440,7 @@ const [pulse, setPulse] = useState(false);
   // WELCOME ON FIRST CLICK
   useEffect(() => {
     const handleFirstClick = () => {
-      const welcome = "Hello  omni, welcome. What can I help you with today?";
+      const welcome = "Hello , welcome. What can I help you with today?";
       setStatus("🟢 " + welcome);
       speak(welcome);
       document.removeEventListener("click", handleFirstClick);
