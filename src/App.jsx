@@ -10,15 +10,22 @@ const LOCAL_AGENT = "http://127.0.0.1:5001";
 const SYSTEM_KEYWORDS = [
   "shutdown", "restart", "lock", "volume up", "volume down", "mute",
   "brightness", "minimize", "maximize", "wifi on", "wifi off",
-  "close ", "play ", "settings"
+  "open ", "close ", "play ", "settings"
 ];
 
 let localAgentAvailable = false;
 
-// Check if local agent is running
-axios.get(`${LOCAL_AGENT}/ping`, { timeout: 1500 })
-  .then(() => { localAgentAvailable = true; })
-  .catch(() => { localAgentAvailable = false; });
+// Check if local agent is running (try both http and https)
+const checkAgent = async () => {
+  try {
+    await axios.get(`${LOCAL_AGENT}/ping`, { timeout: 2000 });
+    localAgentAvailable = true;
+  } catch {
+    localAgentAvailable = false;
+  }
+};
+checkAgent();
+setInterval(checkAgent, 10000); // recheck every 10s
 
 const isSystemCommand = (text) =>
   SYSTEM_KEYWORDS.some(k => text.toLowerCase().includes(k));
