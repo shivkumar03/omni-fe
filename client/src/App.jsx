@@ -52,6 +52,104 @@ const sendToAgent = async (text) => {
   return status;
 };
 
+// ── Device detection ──────────────────────────────────────────────────────
+const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+// ── Mobile command handler ────────────────────────────────────────────────
+const handleMobileCommand = (text) => {
+  const t = text.toLowerCase().trim();
+
+  const mobileApps = {
+    "camera":      "intent://camera#Intent;scheme=android.media.action.IMAGE_CAPTURE;end",
+    "gallery":     "intent://photos#Intent;scheme=content;end",
+    "photos":      "intent://photos#Intent;scheme=content;end",
+    "whatsapp":    "whatsapp://",
+    "instagram":   "instagram://",
+    "facebook":    "fb://",
+    "twitter":     "twitter://",
+    "youtube":     "vnd.youtube://",
+    "maps":        "geo:0,0",
+    "google maps": "geo:0,0",
+    "calculator":  "intent://calculator#Intent;end",
+    "settings":    "intent://settings#Intent;scheme=android.settings.SETTINGS;end",
+    "wifi":        "intent://wifi#Intent;scheme=android.settings.WIFI_SETTINGS;end",
+    "bluetooth":   "intent://bluetooth#Intent;scheme=android.settings.BLUETOOTH_SETTINGS;end",
+    "gmail":       "googlegmail://",
+    "chrome":      "googlechrome://",
+    "spotify":     "spotify://",
+    "telegram":    "tg://",
+    "zoom":        "zoomus://",
+    "linkedin":    "linkedin://",
+    "netflix":     "nflx://",
+    "snapchat":    "snapchat://",
+    "paytm":       "paytmmp://",
+    "phonepe":     "phonepe://",
+    "amazon":      "intent://www.amazon.in#Intent;scheme=https;package=in.amazon.mShop.android.shopping;end",
+    "flipkart":    "intent://www.flipkart.com#Intent;scheme=https;package=com.flipkart.android;end",
+    "swiggy":      "intent://www.swiggy.com#Intent;scheme=https;package=in.swiggy.android;end",
+    "zomato":      "intent://www.zomato.com#Intent;scheme=https;package=com.application.zomato;end",
+  };
+
+  const sites = {
+    "youtube": "https://www.youtube.com", "google": "https://www.google.com",
+    "gmail": "https://mail.google.com", "whatsapp web": "https://web.whatsapp.com",
+    "instagram": "https://www.instagram.com", "facebook": "https://www.facebook.com",
+    "twitter": "https://twitter.com", "linkedin": "https://www.linkedin.com",
+    "netflix": "https://www.netflix.com", "amazon": "https://www.amazon.in",
+    "flipkart": "https://www.flipkart.com", "swiggy": "https://www.swiggy.com",
+    "zomato": "https://www.zomato.com", "chatgpt": "https://chat.openai.com",
+    "github": "https://github.com", "maps": "https://maps.google.com",
+    "hotstar": "https://www.hotstar.com", "prime": "https://www.primevideo.com",
+  };
+
+  if (t.includes("time")) {
+    const now = new Date();
+    return `Time: ${now.toLocaleTimeString()} | ${now.toLocaleDateString()}`;
+  }
+  if (t.includes("date")) {
+    return `Today: ${new Date().toLocaleDateString("en-IN", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}`;
+  }
+
+  if (t.startsWith("call ")) {
+    window.location.href = "tel:";
+    return "Opening dialer";
+  }
+
+  if (t.startsWith("play ")) {
+    const song = t.replace("play","").replace("on youtube","").replace("in youtube","").trim();
+    window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`, "_blank");
+    return `Searching ${song} on YouTube`;
+  }
+
+  if (t.startsWith("open ")) {
+    const appName = t.replace("open ", "").trim();
+    for (const [key, url] of Object.entries(mobileApps)) {
+      if (appName.includes(key)) {
+        window.location.href = url;
+        return `Opening ${key}`;
+      }
+    }
+    for (const [key, url] of Object.entries(sites)) {
+      if (appName.includes(key)) {
+        window.open(url, "_blank");
+        return `Opening ${key}`;
+      }
+    }
+    window.open(`https://www.${appName}.com`, "_blank");
+    return `Opening ${appName}`;
+  }
+
+  // Direct site mentions without "open"
+  for (const [key, url] of Object.entries(sites)) {
+    if (t.includes(key)) {
+      window.open(url, "_blank");
+      return `Opening ${key}`;
+    }
+  }
+
+  return null;
+};
+
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -150,7 +248,7 @@ function App() {
   
   // Existing states
   const [command, setCommand] = useState("");
-  const [status, setStatus] = useState("⚡ System Ready");
+  const [status, setStatus] = useState(isMobile ? "📱 Mobile Ready" : "⚡ System Ready");
   const [sessionHistory, setSessionHistory] = useState([]); // current session only, clears on refresh
   const [calDate, setCalDate] = useState(new Date());
   const [showCal, setShowCal] = useState(false);
@@ -339,6 +437,17 @@ const [pulse, setPulse] = useState(false);
   const handleVoiceCommand = async (voiceText) => {
     setStatus("⚡ Processing...");
     try {
+      // Mobile: handle locally first
+      if (isMobile) {
+        const mobileResult = handleMobileCommand(voiceText);
+        if (mobileResult) {
+          setStatus("🗣️ " + mobileResult);
+          speak(mobileResult);
+          saveToLocalHistory(voiceText);
+          return;
+        }
+      }
+      // Desktop: try local agent via extension
       const local = await sendToAgent(voiceText);
       if (local) {
         setStatus("🗣️ " + local);
@@ -346,6 +455,7 @@ const [pulse, setPulse] = useState(false);
         saveToLocalHistory(voiceText);
         return;
       }
+      // Fallback: cloud AI
       const res = await axios.post(`${API_URL}/command`, { command: voiceText });
       const { status: msg, url } = res.data;
       if (url) window.open(url, "_blank");
@@ -364,6 +474,18 @@ const [pulse, setPulse] = useState(false);
     setStatus("⚡ Processing...");
     setPulse(true);
     try {
+      // Mobile: handle locally first
+      if (isMobile) {
+        const mobileResult = handleMobileCommand(cmdToSend);
+        if (mobileResult) {
+          setStatus("✅ " + mobileResult);
+          speak(mobileResult);
+          saveToLocalHistory(cmdToSend);
+          if (!cmd) setCommand("");
+          return;
+        }
+      }
+      // Desktop: try local agent via extension
       const local = await sendToAgent(cmdToSend);
       if (local) {
         setStatus("✅ " + local);
@@ -372,6 +494,7 @@ const [pulse, setPulse] = useState(false);
         if (!cmd) setCommand("");
         return;
       }
+      // Fallback: cloud AI
       const res = await axios.post(`${API_URL}/command`, { command: cmdToSend });
       const { status: msg, url } = res.data;
       if (url) window.open(url, "_blank");
