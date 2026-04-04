@@ -1,0 +1,38 @@
+<svg width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main Gradient -->
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"></stop>
+      <stop offset="50%" stop-color="#a855f7"></stop>
+      <stop offset="100%" stop-color="#22d3ee"></stop>
+    </linearGradient>
+
+    <!-- Glow -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="blur"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rotating Ring -->
+  <circle cx="110" cy="110" r="85" stroke="url(#grad1)" stroke-width="3" stroke-dasharray="10 6" opacity="0.5" filter="url(#glow)">
+    <animateTransform attributeName="transform" type="rotate" from="0 110 110" to="360 110 110" dur="10s" repeatCount="indefinite"></animateTransform>
+  </circle>
+
+  <!-- Inner Core Glow -->
+  <circle cx="110" cy="110" r="50" fill="url(#grad1)" filter="url(#glow)" opacity="0.9"></circle>
+
+  <!-- Pulse Effect -->
+  <circle cx="110" cy="110" r="50" stroke="url(#grad1)" stroke-width="2" opacity="0.6">
+    <animate attributeName="r" values="50;65;50" dur="2s" repeatCount="indefinite"></animate>
+    <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite"></animate>
+  </circle>
+
+  <!-- OMNI Text -->
+  <text x="50%" y="54%" text-anchor="middle" fill="white" font-size="26" font-family="Orbitron, sans-serif" font-weight="700" letter-spacing="4">
+    OMNI
+  </text>
+</svg>
