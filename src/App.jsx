@@ -10,7 +10,7 @@ const LOCAL_AGENT = "http://127.0.0.1:5001";
 const SYSTEM_KEYWORDS = [
   "shutdown", "restart", "lock", "volume up", "volume down", "mute",
   "brightness", "minimize", "maximize", "wifi on", "wifi off",
-  "open ", "close ", "play ", "settings"
+  "close ", "play ", "settings"
 ];
 
 let localAgentAvailable = false;
