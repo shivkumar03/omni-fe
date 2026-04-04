@@ -498,7 +498,7 @@ const [pulse, setPulse] = useState(false);
         backdropFilter: "blur(10px)",
         zIndex: 999,
       }}>
-        <span style={{ fontSize: "12px", color: "#94a3b8" }}>🖥️ Want full system control?</span>
+        <span style={{ fontSize: "12px", color: "#94a3b8" }}>🖥️ Get full system control on Windows</span>
         <a
           href="https://github.com/shivkumar03/omni-fe/releases/latest/download/OMNI-Assistant-Setup.zip"
           target="_blank"
@@ -512,7 +512,7 @@ const [pulse, setPulse] = useState(false);
             letterSpacing: "0.5px",
           }}
         >
-          ⬇️ Download Windows App
+          ⬇️ Download OMNI v3.0 for Windows
         </a>
         <span style={{ fontSize: "11px", color: "#475569" }}>Free • No install needed</span>
       </div>
