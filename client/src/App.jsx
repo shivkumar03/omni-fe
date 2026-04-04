@@ -515,6 +515,20 @@ const [pulse, setPulse] = useState(false);
           ⬇️ Download OMNI v3.0 for Windows
         </a>
         <span style={{ fontSize: "11px", color: "#475569" }}>Free • No install needed</span>
+        {/* PWA Install Button - shows only on mobile/supported browsers */}
+        <button
+          id="pwa-install-btn"
+          onClick={() => window.__installPWA && window.__installPWA()}
+          style={{
+            display: "none", alignItems: "center", gap: "6px",
+            padding: "5px 14px", borderRadius: "20px",
+            background: "linear-gradient(135deg, #22c55e, #15803d)",
+            color: "white", fontSize: "12px", fontWeight: 700,
+            border: "none", cursor: "pointer",
+          }}
+        >
+          📱 Install App
+        </button>
       </div>
 
       {/* LEFT PANEL: SYSTEM STATS + QUICK MANAGE */}
